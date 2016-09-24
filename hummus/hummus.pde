@@ -10,6 +10,8 @@ float[] fftFilter;
 BeatDetect beat;
 BeatDetect energyBeat;
 
+long lastOnset;
+
 void setup()
 {
     size(512, 600, P3D);
@@ -112,7 +114,19 @@ void draw()
     for (int i = 0; i < bbands; i ++)
         word[0] += (beat.isRange(i,i,1)) ? "X" : " ";
         
-    onset[0] = (energyBeat.isOnset()) ? 2 : 0;
+    if (energyBeat.isOnset())
+    {
+        onset[0] = 2;
+        
+        if (t - lastOnset > 100){
+        println(t - lastOnset);
+        lastOnset = t;
+        }
+        
+    }
+    else
+        onset[0] = 0;
+    
     
     
     for (int i = 0; i < 1000; i++){
