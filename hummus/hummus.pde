@@ -30,13 +30,12 @@ void setup()
     beat = new BeatDetect();
     energyBeat = new BeatDetect();
     //eRadius = 20;
-    
-    samples = new AnalysisOutput[1000];
+
+    history = new AnalysisHistory(300);
 
     beat.detectMode(BeatDetect.FREQ_ENERGY);
     bbands = beat.dectectSize();
 
-    println(bbands);
     beat.setSensitivity(30);
 }
 float eRadius;
@@ -44,20 +43,17 @@ int bands = 30;
 
 int bbands;
 
-AnalysisOutput samples[];
+AnalysisHistory history;
 
 long last_t;
 
 void draw()
 {
     long t = millis();
-
     long lapse = t - last_t; 
-
     last_t = t;
 
     color(50);
-
 
     background(0);
     float decay = 0.9;
@@ -91,35 +87,59 @@ void draw()
         rect(50 + xstart, 100 - bandHeight, specWidth/bands, bandHeight);
     }
 
-    for (int i = 1000 - 1; i > 0; i--) {
-        samples[i] = samples[i-1];
+    AnalysisOutput sample = new AnalysisOutput(t, energyBeat, beat);
+    history.addSample(sample);
+
+    int xStart = 50;
+    int yStart = 100;
+
+    for (int i = 0; i < history.getSize(); i++) {
+
+        AnalysisOutput s = history.getAnalysis(i);
+        int yPos = (int)(yStart + (t - s.getTimestamp())/10);
+        for (int j = 0; j < bbands; j++)
+        {
+            stroke(0, 0);
+            fill(j * 100. / bands, 80, 50);
+
+            if (s.isOnset(j))
+                rect(xStart + 10 * j, yPos, 10, 3);
+        }
+
+        if (s.onsetCount() > 10)
+            text(s.onsetCount(), xStart - 40, yPos);
+
+        fill (50);
+        if (s.isOnset())
+            rect(xStart - 10, yPos, 10, 3);
     }
     
-    samples[0] = new AnalysisOutput(t, energyBeat, beat);
-
-    for (int i = 0; i < 1000; i++) {
+    int startH = 370;
+    int barWidth = 7;
+    
+    int bucketWidth = 5;
+    
+    for (int bpm = 80; bpm < 180; bpm+= bucketWidth)
+    {
         
-        if (samples[i] != null)
-        {
-            int xPos = (int)(100 + (t - samples[i].getTimestamp())/10);
-            for (int j = 0; j < bbands; j++)
-            {
-                stroke(0, 0);
-                fill(j * 100. / bands, 80, 50);
- 
-                if (samples[i].isOnset(j))
-                {
-                    rect(50 + 10 * j, xPos, 10, 3);
-                }
-            }
-            
-            if (samples[i].onsetCount() > 10)
-                text(samples[i].onsetCount(), 10, xPos);
-
-            fill (50);
-            if (samples[i].isOnset())
-                rect(40, xPos, 10, 3);
-        }
+        
+        fill(75);
+        color(75);
+        stroke(0);
+        
+        int xDelta = (bpm - 80) * barWidth / bucketWidth;;
+        
+        int top = 60000/bpm;
+        int bottom = 60000/(bpm + bucketWidth);
+        
+        int h = history.getBeatRange(bottom, top) * 2;
+        
+        rect(startH + xDelta, 100 - h, barWidth, h);
+        
+        textAlign(CENTER);
+        textSize(10);
+        if ((bpm % 20) == 0)
+            text(bpm, startH + xDelta, 110);
     }
 
 
