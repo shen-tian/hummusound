@@ -9,7 +9,7 @@ public class AnalysisOutput
     
     public AnalysisOutput(long timestamp, BeatDetect energyBD, BeatDetect freqBD)
     {
-        onset = energyBD.isOnset();
+        onset = freqBD.isKick();//energyBD.isOnset();
         onsets = new boolean[freqBD.dectectSize()];
         
         for (int i = 0; i < freqBD.dectectSize(); i++)

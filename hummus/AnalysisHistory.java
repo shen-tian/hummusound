@@ -40,7 +40,6 @@ public class AnalysisHistory
     
     private void addBeat(int millis)
     {
-        System.out.println(millis);
         bpmQueue.add(millis);
         if (bpmQueue.size() > 100)
             bpmQueue.removeFirst();

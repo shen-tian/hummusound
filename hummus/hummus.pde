@@ -12,6 +12,8 @@ BeatDetect energyBeat;
 
 long lastOnset;
 
+FullListener listener;
+
 void setup()
 {
     size(512, 600, P3D);
@@ -19,24 +21,36 @@ void setup()
     minim = new Minim(this); 
 
     // Small buffer size!
-    in = minim.getLineIn();
-    //in = minim.loadFile("/Users/Shen/kafkaf.mp3", 512);
-    //((AudioPlayer)in).loop();
+    in = minim.getLineIn(); 
+    
     fft = new FFT(in.bufferSize(), in.sampleRate());
+    fft.logAverages( 60, 3);
+    
+    System.out.println(fft.avgSize());
+    
     fftFilter = new float[fft.specSize()];
+    
+    System.out.println(in.bufferSize());
+    System.out.println(in.sampleRate());
+    System.out.println(fft.specSize());
 
     colorMode(HSB, 100);
 
     beat = new BeatDetect();
     energyBeat = new BeatDetect();
-    //eRadius = 20;
 
     history = new AnalysisHistory(300);
 
     beat.detectMode(BeatDetect.FREQ_ENERGY);
     bbands = beat.dectectSize();
+    
+    System.out.println(bbands);
 
-    beat.setSensitivity(30);
+    beat.setSensitivity(150);
+    
+    listener = new FullListener(beat, fft, in); 
+    
+    ((AudioInput)in).enableMonitoring();
 }
 float eRadius;
 int bands = 30;
@@ -60,38 +74,37 @@ void draw()
 
     text(lapse, 10, 10);
 
-    fft.forward(in.mix);
-    beat.detect(in.mix);
+    //fft.forward(in.mix);
+    //beat.detect(in.mix);
     energyBeat.detect(in.mix);
 
     stroke(192);
-
-    for (int i = 0; i < fft.specSize (); i++) {
-        fftFilter[i] = max(fftFilter[i] * decay, log(1 + fft.getBand(i)));
-    }
-
-    int specWidth = 300;
-
-    for (int i = 0; i < bands; i ++)
+    
+    int n = fft.avgSize();
+    
+    int fftWidth = 15;
+    int xStart = 50;
+    int yStart = 200;
+    
+    for (int i = 0; i < n; i++)
     {
-        int xstart = specWidth/bands * i; 
-        fill(i * 100. / bands, 80, 100);
+        fftFilter[i] = max(fftFilter[i] * decay, log(1 + fft.getAvg(i)));
+        fill(i * 100. / n, 80, 100);
         stroke(0);
-        int samples = fft.specSize() / bands;
-        float total = 0;
-        for (int j =0; j < samples; j++)
-            total += fftFilter[fft.specSize() * i / bands + j];
-
-        int bandHeight = (int)(total / samples * 50);
-
-        rect(50 + xstart, 100 - bandHeight, specWidth/bands, bandHeight);
+        
+        int x = xStart + i * fftWidth;
+        int bandHeight = (int)(50 * fftFilter[i]);
+        rect(x, yStart - bandHeight, fftWidth, bandHeight);
+        if (i % 3 == 0) {
+          int freq = (int)(fft.getAverageCenterFrequency(i) - fft.getAverageBandWidth(i) / 2);
+          textAlign(CENTER);
+          
+          text(freq, x, yStart + 10);
+        }
     }
 
     AnalysisOutput sample = new AnalysisOutput(t, energyBeat, beat);
     history.addSample(sample);
-
-    int xStart = 50;
-    int yStart = 100;
 
     for (int i = 0; i < history.getSize(); i++) {
 
@@ -103,7 +116,7 @@ void draw()
             fill(j * 100. / bands, 80, 50);
 
             if (s.isOnset(j))
-                rect(xStart + 10 * j, yPos, 10, 3);
+                rect(xStart + fftWidth * j, yPos, fftWidth, 3);
         }
 
         if (s.onsetCount() > 10)
@@ -117,7 +130,7 @@ void draw()
     int startH = 370;
     int barWidth = 7;
     
-    int bucketWidth = 5;
+    int bucketWidth = 2;
     
     for (int bpm = 80; bpm < 180; bpm+= bucketWidth)
     {
@@ -141,15 +154,4 @@ void draw()
         if ((bpm % 20) == 0)
             text(bpm, startH + xDelta, 110);
     }
-
-
-    //float eRadius = 20;
-
-
-    float a = map(eRadius, 20, 80, 60, 255);
-    fill(60, 60, 100);
-    if ( beat.isOnset() ) eRadius = 80;
-    //ellipse(width/2, height/2, eRadius, eRadius);
-    eRadius *= 0.97;
-    if ( eRadius < 20 ) eRadius = 20;
 }
